@@ -1,6 +1,7 @@
 use crate::prelude::*;
 use crate::{MdnsBrowser, MdnsService, ServiceType, TxtRecord};
-use std::sync::{Arc, Mutex};
+use std::rc::Rc;
+use std::sync::Mutex;
 use std::time::Duration;
 
 #[derive(Default, Debug)]
@@ -22,7 +23,7 @@ fn service_register_is_browsable() {
         8080,
     );
 
-    let context: Arc<Mutex<Context>> = Arc::default();
+    let context: Rc<Mutex<Context>> = Rc::default();
 
     let mut txt = TxtRecord::new();
     txt.insert("foo", "bar").unwrap();
@@ -38,7 +39,7 @@ fn service_register_is_browsable() {
         let context = context
             .as_ref()
             .unwrap()
-            .downcast_ref::<Arc<Mutex<Context>>>()
+            .downcast_ref::<Rc<Mutex<Context>>>()
             .unwrap()
             .clone();
 
@@ -51,7 +52,7 @@ fn service_register_is_browsable() {
                 let mut mtx = context
                     .as_ref()
                     .unwrap()
-                    .downcast_ref::<Arc<Mutex<Context>>>()
+                    .downcast_ref::<Rc<Mutex<Context>>>()
                     .unwrap()
                     .lock()
                     .unwrap();

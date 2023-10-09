@@ -4,12 +4,13 @@ use super::service_ref::ManagedDNSServiceRef;
 use crate::event_loop::TEventLoop;
 use crate::{ffi, Result};
 use std::marker::PhantomData;
-use std::sync::{Arc, Mutex};
+use std::rc::Rc;
+use std::sync::Mutex;
 use std::time::Duration;
 
 #[derive(new)]
 pub struct BonjourEventLoop<'a> {
-    service: Arc<Mutex<ManagedDNSServiceRef>>,
+    service: Rc<Mutex<ManagedDNSServiceRef>>,
     phantom: PhantomData<&'a ManagedDNSServiceRef>,
 }
 

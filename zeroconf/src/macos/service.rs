@@ -13,11 +13,12 @@ use bonjour_sys::{DNSServiceErrorType, DNSServiceFlags, DNSServiceRef};
 use libc::{c_char, c_void};
 use std::any::Any;
 use std::ffi::CString;
-use std::sync::{Arc, Mutex};
+use std::rc::Rc;
+use std::sync::Mutex;
 
 #[derive(Debug)]
 pub struct BonjourMdnsService {
-    service: Arc<Mutex<ManagedDNSServiceRef>>,
+    service: Rc<Mutex<ManagedDNSServiceRef>>,
     kind: CString,
     port: u16,
     name: Option<CString>,
@@ -31,7 +32,7 @@ pub struct BonjourMdnsService {
 impl TMdnsService for BonjourMdnsService {
     fn new(service_type: ServiceType, port: u16) -> Self {
         Self {
-            service: Arc::default(),
+            service: Rc::default(),
             kind: bonjour_util::format_regtype(&service_type),
             port,
             name: None,
@@ -90,7 +91,7 @@ impl TMdnsService for BonjourMdnsService {
     }
 
     fn set_context(&mut self, context: Box<dyn Any>) {
-        self.context.user_context = Some(Arc::from(context));
+        self.context.user_context = Some(Rc::from(context));
     }
 
     fn context(&self) -> Option<&dyn Any> {
@@ -135,7 +136,7 @@ impl TMdnsService for BonjourMdnsService {
 #[derive(Default, FromRaw, AsRaw)]
 struct BonjourServiceContext {
     registered_callback: Option<Box<ServiceRegisteredCallback>>,
-    user_context: Option<Arc<dyn Any>>,
+    user_context: Option<Rc<dyn Any>>,
 }
 // Necessary for BonjourMdnsService, cant be `derive`d because of registered_callback
 impl std::fmt::Debug for BonjourServiceContext {

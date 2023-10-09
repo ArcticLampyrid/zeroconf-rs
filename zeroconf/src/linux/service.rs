@@ -22,7 +22,7 @@ use std::ffi::CString;
 use std::fmt::{self, Formatter};
 use std::rc::Rc;
 use std::str::FromStr;
-use std::sync::Arc;
+use std::sync::Rc;
 
 #[derive(Debug)]
 pub struct AvahiMdnsService {
@@ -99,7 +99,7 @@ impl TMdnsService for AvahiMdnsService {
     }
 
     fn set_context(&mut self, context: Box<dyn Any>) {
-        self.context.user_context = Some(Arc::from(context))
+        self.context.user_context = Some(Rc::from(context))
     }
 
     fn context(&self) -> Option<&dyn Any> {
@@ -141,7 +141,7 @@ struct AvahiServiceContext {
     domain: Option<CString>,
     host: Option<CString>,
     registered_callback: Option<Box<ServiceRegisteredCallback>>,
-    user_context: Option<Arc<dyn Any>>,
+    user_context: Option<Rc<dyn Any>>,
 }
 
 impl AvahiServiceContext {

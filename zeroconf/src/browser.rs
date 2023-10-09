@@ -2,7 +2,7 @@
 
 use crate::{EventLoop, NetworkInterface, Result, ServiceType, TxtRecord};
 use std::any::Any;
-use std::sync::Arc;
+use std::rc::Rc;
 
 /// Interface for interacting with underlying mDNS implementation service browsing capabilities.
 pub trait TMdnsBrowser {
@@ -45,7 +45,7 @@ pub trait TMdnsBrowser {
 /// * `context` - The optional user context passed through
 ///
 /// [`MdnsBrowser`]: type.MdnsBrowser.html
-pub type ServiceDiscoveredCallback = dyn Fn(Result<ServiceDiscovery>, Option<Arc<dyn Any>>);
+pub type ServiceDiscoveredCallback = dyn Fn(Result<ServiceDiscovery>, Option<Rc<dyn Any>>);
 
 /// Represents a service that has been discovered by a [`MdnsBrowser`].
 ///

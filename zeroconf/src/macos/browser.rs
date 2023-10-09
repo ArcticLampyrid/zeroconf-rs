@@ -16,11 +16,12 @@ use std::ffi::CString;
 use std::fmt::{self, Formatter};
 use std::net::IpAddr;
 use std::ptr;
-use std::sync::{Arc, Mutex};
+use std::rc::Rc;
+use std::sync::Mutex;
 
 #[derive(Debug)]
 pub struct BonjourMdnsBrowser {
-    service: Arc<Mutex<ManagedDNSServiceRef>>,
+    service: Rc<Mutex<ManagedDNSServiceRef>>,
     kind: CString,
     interface_index: u32,
     context: Box<BonjourBrowserContext>,
@@ -29,7 +30,7 @@ pub struct BonjourMdnsBrowser {
 impl TMdnsBrowser for BonjourMdnsBrowser {
     fn new(service_type: ServiceType) -> Self {
         Self {
-            service: Arc::default(),
+            service: Rc::default(),
             kind: bonjour_util::format_regtype(&service_type),
             interface_index: constants::BONJOUR_IF_UNSPEC,
             context: Box::default(),
@@ -52,7 +53,7 @@ impl TMdnsBrowser for BonjourMdnsBrowser {
     }
 
     fn set_context(&mut self, context: Box<dyn Any>) {
-        self.context.user_context = Some(Arc::from(context));
+        self.context.user_context = Some(Rc::from(context));
     }
 
     fn context(&self) -> Option<&dyn Any> {
@@ -85,7 +86,7 @@ struct BonjourBrowserContext {
     resolved_domain: Option<String>,
     resolved_port: u16,
     resolved_txt: Option<TxtRecord>,
-    user_context: Option<Arc<dyn Any>>,
+    user_context: Option<Rc<dyn Any>>,
 }
 
 impl BonjourBrowserContext {

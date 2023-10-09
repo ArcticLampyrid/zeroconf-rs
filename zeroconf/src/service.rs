@@ -2,7 +2,7 @@
 
 use crate::{EventLoop, NetworkInterface, Result, ServiceType, TxtRecord};
 use std::any::Any;
-use std::sync::Arc;
+use std::rc::Rc;
 
 /// Interface for interacting with underlying mDNS service implementation registration
 /// capabilities.
@@ -75,7 +75,7 @@ pub trait TMdnsService {
 /// * `context` - The optional user context passed through
 ///
 /// [`MdnsService`]: type.MdnsService.html
-pub type ServiceRegisteredCallback = dyn Fn(Result<ServiceRegistration>, Option<Arc<dyn Any>>);
+pub type ServiceRegisteredCallback = dyn Fn(Result<ServiceRegistration>, Option<Rc<dyn Any>>);
 
 /// Represents a registration event for a [`MdnsService`].
 ///
