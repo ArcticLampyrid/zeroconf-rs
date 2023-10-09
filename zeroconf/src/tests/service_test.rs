@@ -1,7 +1,7 @@
 use crate::prelude::*;
 use crate::{MdnsBrowser, MdnsService, ServiceType, TxtRecord};
+use std::cell::RefCell;
 use std::rc::Rc;
-use std::sync::Mutex;
 use std::time::Duration;
 
 #[derive(Default, Debug)]
@@ -23,7 +23,7 @@ fn service_register_is_browsable() {
         8080,
     );
 
-    let context: Rc<Mutex<Context>> = Rc::default();
+    let context: Rc<RefCell<Context>> = Rc::default();
 
     let mut txt = TxtRecord::new();
     txt.insert("foo", "bar").unwrap();
@@ -39,7 +39,7 @@ fn service_register_is_browsable() {
         let context = context
             .as_ref()
             .unwrap()
-            .downcast_ref::<Rc<Mutex<Context>>>()
+            .downcast_ref::<Rc<RefCell<Context>>>()
             .unwrap()
             .clone();
 
@@ -52,10 +52,9 @@ fn service_register_is_browsable() {
                 let mut mtx = context
                     .as_ref()
                     .unwrap()
-                    .downcast_ref::<Rc<Mutex<Context>>>()
+                    .downcast_ref::<Rc<RefCell<Context>>>()
                     .unwrap()
-                    .lock()
-                    .unwrap();
+                    .borrow_mut();
 
                 mtx.txt = service.txt().clone();
                 mtx.is_discovered = true;
@@ -70,12 +69,12 @@ fn service_register_is_browsable() {
         loop {
             event_loop.poll(Duration::from_secs(0)).unwrap();
 
-            if context.lock().unwrap().is_discovered {
+            if context.borrow_mut().is_discovered {
                 break;
             }
 
             if browse_start.elapsed().as_secs() > TOTAL_TEST_TIME_S / 2 {
-                context.lock().unwrap().timed_out = true;
+                context.borrow_mut().timed_out = true;
                 break;
             }
         }
@@ -87,7 +86,7 @@ fn service_register_is_browsable() {
     loop {
         event_loop.poll(Duration::from_secs(0)).unwrap();
 
-        let mut mtx = context.lock().unwrap();
+        let mut mtx = context.borrow_mut();
 
         if mtx.is_discovered {
             assert_eq!(txt, mtx.txt.take().unwrap());
@@ -100,5 +99,5 @@ fn service_register_is_browsable() {
         }
     }
 
-    assert!(!context.lock().unwrap().timed_out);
+    assert!(!context.borrow().timed_out);
 }

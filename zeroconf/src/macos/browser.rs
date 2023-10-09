@@ -12,16 +12,16 @@ use crate::{ServiceDiscoveredCallback, ServiceDiscovery};
 use bonjour_sys::{DNSServiceErrorType, DNSServiceFlags, DNSServiceRef};
 use libc::{c_char, c_uchar, c_void, sockaddr_in};
 use std::any::Any;
+use std::cell::RefCell;
 use std::ffi::CString;
 use std::fmt::{self, Formatter};
 use std::net::IpAddr;
 use std::ptr;
 use std::rc::Rc;
-use std::sync::Mutex;
 
 #[derive(Debug)]
 pub struct BonjourMdnsBrowser {
-    service: Rc<Mutex<ManagedDNSServiceRef>>,
+    service: Rc<RefCell<ManagedDNSServiceRef>>,
     kind: CString,
     interface_index: u32,
     context: Box<BonjourBrowserContext>,
@@ -63,7 +63,7 @@ impl TMdnsBrowser for BonjourMdnsBrowser {
     fn browse_services(&mut self) -> Result<EventLoop> {
         debug!("Browsing services: {:?}", self);
 
-        self.service.lock().unwrap().browse_services(
+        self.service.borrow_mut().browse_services(
             BrowseServicesParams::builder()
                 .flags(0)
                 .interface_index(self.interface_index)
