@@ -1,6 +1,7 @@
 use crate::prelude::*;
 use crate::{MdnsBrowser, MdnsService, ServiceType, TxtRecord};
-use std::sync::{Arc, Mutex};
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::time::Duration;
 
 #[derive(Default, Debug)]
@@ -22,7 +23,7 @@ fn service_register_is_browsable() {
         8080,
     );
 
-    let context: Arc<Mutex<Context>> = Arc::default();
+    let context: Rc<RefCell<Context>> = Rc::default();
 
     let mut txt = TxtRecord::new();
     txt.insert("foo", "bar").unwrap();
@@ -35,29 +36,17 @@ fn service_register_is_browsable() {
         let mut browser =
             MdnsBrowser::new(ServiceType::with_sub_types("http", "tcp", vec!["printer"]).unwrap());
 
-        let context = context
-            .as_ref()
-            .unwrap()
-            .downcast_ref::<Arc<Mutex<Context>>>()
-            .unwrap()
-            .clone();
-
         browser.set_context(Box::new(context.clone()));
 
         browser.set_service_discovered_callback(Box::new(|service, context| {
             let service = service.unwrap();
 
             if service.name() == SERVICE_NAME {
-                let mut mtx = context
-                    .as_ref()
-                    .unwrap()
-                    .downcast_ref::<Arc<Mutex<Context>>>()
-                    .unwrap()
-                    .lock()
-                    .unwrap();
+                let c = context.as_ref().unwrap().borrow_mut();
+                let mut context = c.downcast_ref::<RefCell<Context>>().unwrap().borrow_mut();
 
-                mtx.txt = service.txt().clone();
-                mtx.is_discovered = true;
+                context.txt = service.txt().clone();
+                context.is_discovered = true;
 
                 debug!("Service discovered");
             }
@@ -69,12 +58,15 @@ fn service_register_is_browsable() {
         loop {
             event_loop.poll(Duration::from_secs(0)).unwrap();
 
-            if context.lock().unwrap().is_discovered {
+            let mut c = context.as_ref().unwrap().borrow_mut();
+            let context = c.downcast_mut::<Context>().unwrap();
+
+            if context.is_discovered {
                 break;
             }
 
             if browse_start.elapsed().as_secs() > TOTAL_TEST_TIME_S / 2 {
-                context.lock().unwrap().timed_out = true;
+                context.timed_out = true;
                 break;
             }
         }
@@ -86,7 +78,7 @@ fn service_register_is_browsable() {
     loop {
         event_loop.poll(Duration::from_secs(0)).unwrap();
 
-        let mut mtx = context.lock().unwrap();
+        let mut mtx = context.borrow_mut();
 
         if mtx.is_discovered {
             assert_eq!(txt, mtx.txt.take().unwrap());
@@ -99,5 +91,5 @@ fn service_register_is_browsable() {
         }
     }
 
-    assert!(!context.lock().unwrap().timed_out);
+    assert!(!context.borrow().timed_out);
 }

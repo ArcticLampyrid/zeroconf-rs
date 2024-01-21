@@ -223,6 +223,7 @@ pub mod macos;
 
 pub use browser::{ServiceDiscoveredCallback, ServiceDiscovery};
 pub use interface::*;
+use service::DefaultServiceContext;
 pub use service::{ServiceRegisteredCallback, ServiceRegistration};
 pub use service_type::*;
 
@@ -238,14 +239,16 @@ pub type MdnsBrowser = macos::browser::BonjourMdnsBrowser;
 pub type MdnsService = linux::service::AvahiMdnsService;
 /// Type alias for the platform-specific mDNS service implementation
 #[cfg(target_vendor = "apple")]
-pub type MdnsService = macos::service::BonjourMdnsService;
+pub type MdnsService<Context = DefaultServiceContext> = macos::service::BonjourMdnsService<Context>;
+
+// TODO: update AvahiEventLoop lifetimes
 
 /// Type alias for the platform-specific structure responsible for polling the mDNS event loop
 #[cfg(target_os = "linux")]
 pub type EventLoop<'a> = linux::event_loop::AvahiEventLoop<'a>;
 /// Type alias for the platform-specific structure responsible for polling the mDNS event loop
 #[cfg(target_vendor = "apple")]
-pub type EventLoop<'a> = macos::event_loop::BonjourEventLoop<'a>;
+pub type EventLoop = macos::event_loop::BonjourEventLoop;
 
 /// Type alias for the platform-specific structure responsible for storing and accessing TXT
 /// record data

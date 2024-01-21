@@ -12,12 +12,13 @@ use crate::{
 use bonjour_sys::{DNSServiceErrorType, DNSServiceFlags, DNSServiceRef};
 use libc::{c_char, c_void};
 use std::any::Any;
+use std::cell::RefCell;
 use std::ffi::CString;
-use std::sync::{Arc, Mutex};
+use std::rc::Rc;
 
 #[derive(Debug)]
-pub struct BonjourMdnsService {
-    service: Arc<Mutex<ManagedDNSServiceRef>>,
+pub struct BonjourMdnsService<Context> {
+    service: Rc<RefCell<ManagedDNSServiceRef>>,
     kind: CString,
     port: u16,
     name: Option<CString>,
@@ -25,13 +26,13 @@ pub struct BonjourMdnsService {
     host: Option<CString>,
     interface_index: u32,
     txt_record: Option<TxtRecord>,
-    context: Box<BonjourServiceContext>,
+    context: Box<BonjourServiceContext<Context>>,
 }
 
-impl TMdnsService for BonjourMdnsService {
+impl<Context> TMdnsService<Context> for BonjourMdnsService<Context> {
     fn new(service_type: ServiceType, port: u16) -> Self {
         Self {
-            service: Arc::default(),
+            service: Rc::default(),
             kind: bonjour_util::format_regtype(&service_type),
             port,
             name: None,
@@ -89,13 +90,13 @@ impl TMdnsService for BonjourMdnsService {
         self.context.registered_callback = Some(registered_callback);
     }
 
-    fn set_context(&mut self, context: Box<dyn Any>) {
-        self.context.user_context = Some(Arc::from(context));
+    fn set_context(&mut self, context: Box<Context>) {
+        self.context.user_context = Some(Rc::new(RefCell::new(context)));
     }
 
-    fn context(&self) -> Option<&dyn Any> {
-        self.context.user_context.as_ref().map(|c| c.as_ref())
-    }
+    // fn context(&self) -> Option<Ref<Context>> {
+    //     self.context.user_context.as_ref().map(|c| c.borrow())
+    // }
 
     fn register(&mut self) -> Result<EventLoop> {
         debug!("Registering service: {:?}", self);
@@ -112,7 +113,7 @@ impl TMdnsService for BonjourMdnsService {
             .map(|t| t.inner().get_bytes_ptr())
             .unwrap_or_null();
 
-        self.service.lock().unwrap().register_service(
+        self.service.borrow_mut().register_service(
             RegisterServiceParams::builder()
                 .flags(constants::BONJOUR_RENAME_FLAGS)
                 .interface_index(self.interface_index)
@@ -133,12 +134,12 @@ impl TMdnsService for BonjourMdnsService {
 }
 
 #[derive(Default, FromRaw, AsRaw)]
-struct BonjourServiceContext {
+struct BonjourServiceContext<Context> {
     registered_callback: Option<Box<ServiceRegisteredCallback>>,
-    user_context: Option<Arc<dyn Any>>,
+    user_context: Option<Rc<RefCell<Context>>>,
 }
 // Necessary for BonjourMdnsService, cant be `derive`d because of registered_callback
-impl std::fmt::Debug for BonjourServiceContext {
+impl<Context> std::fmt::Debug for BonjourServiceContext<Context> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BonjourServiceContext")
             .field("user_context", &self.user_context)
@@ -146,10 +147,22 @@ impl std::fmt::Debug for BonjourServiceContext {
     }
 }
 
-impl BonjourServiceContext {
+impl<Context> BonjourServiceContext<Context> {
     fn invoke_callback(&self, result: Result<ServiceRegistration>) {
         if let Some(f) = &self.registered_callback {
-            f(result, self.user_context.clone());
+            let mut borrowed_context = self.user_context.as_ref().map(|c| c.borrow_mut());
+
+            let context: Option<&mut Context> =
+                borrowed_context.as_mut().map(|c| c.downcast_mut().unwrap());
+
+            // let context: Option<&mut DefaultContext> = self
+            //     .user_context
+            //     .as_ref()
+            //     .map(|c| c.borrow_mut().downcast_mut().unwrap());
+
+            f(result, context);
+
+            // f(result, self.user_context.clone());
         } else {
             warn!("attempted to invoke callback but none was set");
         }
@@ -172,7 +185,7 @@ unsafe extern "C" fn register_callback(
 }
 
 unsafe fn handle_register(
-    context: &BonjourServiceContext,
+    context: &BonjourServiceContext<dyn Any>,
     error: DNSServiceErrorType,
     domain: *const c_char,
     name: *const c_char,

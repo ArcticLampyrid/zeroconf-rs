@@ -27,7 +27,6 @@ use std::any::Any;
 use std::ffi::CString;
 use std::rc::Rc;
 use std::str::FromStr;
-use std::sync::Arc;
 use std::{fmt, ptr};
 
 #[derive(Debug)]
@@ -68,7 +67,7 @@ impl TMdnsBrowser for AvahiMdnsBrowser {
     }
 
     fn set_context(&mut self, context: Box<dyn Any>) {
-        self.context.user_context = Some(Arc::from(context));
+        self.context.user_context = Some(Rc::from(context));
     }
 
     fn context(&self) -> Option<&dyn Any> {
@@ -120,7 +119,7 @@ struct AvahiBrowserContext {
     client: Option<Rc<ManagedAvahiClient>>,
     resolvers: ServiceResolverSet,
     service_discovered_callback: Option<Box<ServiceDiscoveredCallback>>,
-    user_context: Option<Arc<dyn Any>>,
+    user_context: Option<Rc<dyn Any>>,
 }
 
 impl AvahiBrowserContext {

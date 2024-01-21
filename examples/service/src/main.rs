@@ -4,7 +4,8 @@ extern crate log;
 use clap::Parser;
 
 use std::any::Any;
-use std::sync::{Arc, Mutex};
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::time::Duration;
 use zeroconf::prelude::*;
 use zeroconf::{MdnsService, ServiceRegistration, ServiceType, TxtRecord};
@@ -43,7 +44,7 @@ fn main() {
     let service_type = ServiceType::with_sub_types(&name, &protocol, sub_types).unwrap();
     let mut service = MdnsService::new(service_type, 8080);
     let mut txt_record = TxtRecord::new();
-    let context: Arc<Mutex<Context>> = Arc::default();
+    let context: Rc<RefCell<Context>> = Rc::default();
 
     txt_record.insert("foo", "bar").unwrap();
 
@@ -62,20 +63,16 @@ fn main() {
 
 fn on_service_registered(
     result: zeroconf::Result<ServiceRegistration>,
-    context: Option<Arc<dyn Any>>,
+    context: Option<Rc<RefCell<dyn Any>>>,
 ) {
     let service = result.unwrap();
 
     info!("Service registered: {:?}", service);
 
-    let context = context
-        .as_ref()
-        .unwrap()
-        .downcast_ref::<Arc<Mutex<Context>>>()
-        .unwrap()
-        .clone();
+    let c = context.as_ref().unwrap().borrow_mut();
+    let mut context = c.downcast_ref::<RefCell<Context>>().unwrap().borrow_mut();
 
-    context.lock().unwrap().service_name = service.name().clone();
+    context.service_name = service.name().clone();
 
     info!("Context: {:?}", context);
 

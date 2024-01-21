@@ -1,8 +1,11 @@
 //! Trait definition for cross-platform browser
 
 use crate::{EventLoop, NetworkInterface, Result, ServiceType, TxtRecord};
-use std::any::Any;
-use std::sync::Arc;
+use std::{
+    any::Any,
+    cell::{Ref, RefCell},
+    rc::Rc,
+};
 
 /// Interface for interacting with underlying mDNS implementation service browsing capabilities.
 pub trait TMdnsBrowser {
@@ -32,7 +35,7 @@ pub trait TMdnsBrowser {
     fn set_context(&mut self, context: Box<dyn Any>);
 
     /// Returns the optional user context to pass through to the callback.
-    fn context(&self) -> Option<&dyn Any>;
+    fn context(&self) -> Option<Ref<dyn Any>>;
 
     /// Starts the browser. Returns an `EventLoop` which can be called to keep the browser alive.
     fn browse_services(&mut self) -> Result<EventLoop>;
@@ -45,7 +48,7 @@ pub trait TMdnsBrowser {
 /// * `context` - The optional user context passed through
 ///
 /// [`MdnsBrowser`]: type.MdnsBrowser.html
-pub type ServiceDiscoveredCallback = dyn Fn(Result<ServiceDiscovery>, Option<Arc<dyn Any>>);
+pub type ServiceDiscoveredCallback = dyn Fn(Result<ServiceDiscovery>, Option<Rc<RefCell<dyn Any>>>);
 
 /// Represents a service that has been discovered by a [`MdnsBrowser`].
 ///

@@ -4,7 +4,8 @@ extern crate log;
 use clap::Parser;
 
 use std::any::Any;
-use std::sync::Arc;
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::time::Duration;
 use zeroconf::prelude::*;
 use zeroconf::{MdnsBrowser, ServiceDiscovery, ServiceType};
@@ -57,7 +58,7 @@ fn main() {
 
 fn on_service_discovered(
     result: zeroconf::Result<ServiceDiscovery>,
-    _context: Option<Arc<dyn Any>>,
+    _context: Option<Rc<RefCell<dyn Any>>>,
 ) {
     info!("Service discovered: {:?}", result.unwrap());
 

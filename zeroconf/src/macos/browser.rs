@@ -12,15 +12,16 @@ use crate::{ServiceDiscoveredCallback, ServiceDiscovery};
 use bonjour_sys::{DNSServiceErrorType, DNSServiceFlags, DNSServiceRef};
 use libc::{c_char, c_uchar, c_void, sockaddr_in};
 use std::any::Any;
+use std::cell::{Ref, RefCell};
 use std::ffi::CString;
 use std::fmt::{self, Formatter};
 use std::net::IpAddr;
 use std::ptr;
-use std::sync::{Arc, Mutex};
+use std::rc::Rc;
 
 #[derive(Debug)]
 pub struct BonjourMdnsBrowser {
-    service: Arc<Mutex<ManagedDNSServiceRef>>,
+    service: Rc<RefCell<ManagedDNSServiceRef>>,
     kind: CString,
     interface_index: u32,
     context: Box<BonjourBrowserContext>,
@@ -29,7 +30,7 @@ pub struct BonjourMdnsBrowser {
 impl TMdnsBrowser for BonjourMdnsBrowser {
     fn new(service_type: ServiceType) -> Self {
         Self {
-            service: Arc::default(),
+            service: Rc::default(),
             kind: bonjour_util::format_regtype(&service_type),
             interface_index: constants::BONJOUR_IF_UNSPEC,
             context: Box::default(),
@@ -52,17 +53,17 @@ impl TMdnsBrowser for BonjourMdnsBrowser {
     }
 
     fn set_context(&mut self, context: Box<dyn Any>) {
-        self.context.user_context = Some(Arc::from(context));
+        self.context.user_context = Some(Rc::new(RefCell::new(context)));
     }
 
-    fn context(&self) -> Option<&dyn Any> {
-        self.context.user_context.as_ref().map(|c| c.as_ref())
+    fn context(&self) -> Option<Ref<dyn Any>> {
+        self.context.user_context.as_ref().map(|c| c.borrow())
     }
 
     fn browse_services(&mut self) -> Result<EventLoop> {
         debug!("Browsing services: {:?}", self);
 
-        self.service.lock().unwrap().browse_services(
+        self.service.borrow_mut().browse_services(
             BrowseServicesParams::builder()
                 .flags(0)
                 .interface_index(self.interface_index)
@@ -85,7 +86,7 @@ struct BonjourBrowserContext {
     resolved_domain: Option<String>,
     resolved_port: u16,
     resolved_txt: Option<TxtRecord>,
-    user_context: Option<Arc<dyn Any>>,
+    user_context: Option<Rc<RefCell<dyn Any>>>,
 }
 
 impl BonjourBrowserContext {

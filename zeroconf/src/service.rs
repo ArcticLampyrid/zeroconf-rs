@@ -1,12 +1,10 @@
 //! Trait definition for cross-platform service.
 
 use crate::{EventLoop, NetworkInterface, Result, ServiceType, TxtRecord};
-use std::any::Any;
-use std::sync::Arc;
 
 /// Interface for interacting with underlying mDNS service implementation registration
 /// capabilities.
-pub trait TMdnsService {
+pub trait TMdnsService<Context: Sized = DefaultServiceContext> {
     /// Creates a new `MdnsService` with the specified `ServiceType` (e.g. `_http._tcp`) and `port`.
     fn new(service_type: ServiceType, port: u16) -> Self;
 
@@ -58,15 +56,17 @@ pub trait TMdnsService {
 
     /// Sets the optional user context to pass through to the callback. This is useful if you need
     /// to share state between pre and post-callback. The context type must implement `Any`.
-    fn set_context(&mut self, context: Box<dyn Any>);
+    fn set_context(&mut self, context: Box<Context>);
 
     /// Returns the optional user context.
-    fn context(&self) -> Option<&dyn Any>;
+    // fn context(&self) -> Option<Ref<Context>>;
 
     /// Registers and start's the service. Returns an `EventLoop` which can be called to keep
     /// the service alive.
     fn register(&mut self) -> Result<EventLoop>;
 }
+
+pub struct DefaultServiceContext;
 
 /// Callback invoked from [`MdnsService`] once it has successfully registered.
 ///
@@ -75,7 +75,8 @@ pub trait TMdnsService {
 /// * `context` - The optional user context passed through
 ///
 /// [`MdnsService`]: type.MdnsService.html
-pub type ServiceRegisteredCallback = dyn Fn(Result<ServiceRegistration>, Option<Arc<dyn Any>>);
+pub type ServiceRegisteredCallback<Context = DefaultServiceContext> =
+    dyn Fn(Result<ServiceRegistration>, Option<&mut Context>);
 
 /// Represents a registration event for a [`MdnsService`].
 ///
